@@ -1,7 +1,6 @@
 """This module provides RP Tree CLI."""
 
 import argparse
-import os
 import sys
 import pathlib
 
@@ -10,6 +9,13 @@ from .rptree import DirectoryTree
 
 
 def parse_cmd_line_arguments():
+    """Parse the command
+        -line arguments for the RP Tree CLI.
+    Returns:
+        argparse.
+    Namespace
+        : The parsed command-line arguments.
+    """
     parser = argparse.ArgumentParser(
         description="RP Tree CLI",
         epilog="RP Tree CLI",
@@ -51,10 +57,20 @@ def parse_cmd_line_arguments():
 
 
 def main():
+    """The main entry point for the RP Tree CLI. It parses the command-line arguments,
+    validates the provided root directory, and generates the directory tree based on the
+    specified options.
+    """
     args = parse_cmd_line_arguments()
     root_dir = pathlib.Path(args.root_dir)
     if not root_dir.is_dir():
-        raise ValueError(f"{root_dir} is not a directory")
-        sys.exit()
-    tree = DirectoryTree(root_dir, dir_only=args.dir_only, output_file=args.output_file, as_string=False)
-    tree.generate()
+        print(f"{root_dir} is not a directory", file=sys.stderr)
+        sys.exit(1)
+
+    tree = DirectoryTree(args.root_dir, dir_only=args.dir_only, output_file=args.output_file)
+    if args.as_string:
+        tree_string = tree.generate_as_string(with_colors=False)
+        print(tree_string)
+    else:
+        tree.generate()
+
