@@ -1,11 +1,12 @@
 import requests
+import re
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 from pydantic import BaseModel, validator
 from typing import List, Set
 import time
-import re
-
+from textblob import TextBlob
+from colorama import Fore
 
 class WebCrawler(BaseModel):
     seed_urls: List[str]
@@ -21,13 +22,25 @@ class WebCrawler(BaseModel):
         return value
 
     def process_text(self, url: str, text: str) -> None:
-        # This method processes the extracted text from the page.
-        # You can implement any text processing or analysis logic here.
-        print(f'Processing text from URL: {url}')
-        # print(text.replace("\n", "").replace("\t", "|").encode("utf-8"))
-        text = re.sub(r'\s', '', text)
-        print(text)
+        # Remove all whitespace characters from the text
+        text_without_whitespace = re.sub(r'\s', '', text)
 
+        # Perform sentiment analysis using TextBlob
+        analysis = TextBlob(text_without_whitespace)
+        sentiment_polarity = analysis.sentiment.polarity
+
+        # Interpret the sentiment polarity
+        if sentiment_polarity > 0:
+            sentiment = 'positive'
+        elif sentiment_polarity < 0:
+            sentiment = 'negative'
+        else:
+            sentiment = 'neutral'
+
+        # Print the results
+        print(Fore.LIGHTMAGENTA_EX + f'Sentiment analysis for URL: {Fore.LIGHTGREEN_EX}{url}')
+        print(Fore.LIGHTMAGENTA_EX + f'Sentiment polarity: {Fore.LIGHTYELLOW_EX}{sentiment_polarity}')
+        print(Fore.LIGHTMAGENTA_EX + f'Sentiment: {Fore.LIGHTYELLOW_EX}{sentiment}' + Fore.RESET)
 
     def crawl(self, url: str, depth: int) -> None:
         if depth > self.max_depth or url in self.visited:
@@ -35,12 +48,15 @@ class WebCrawler(BaseModel):
 
         self.visited.add(url)
 
+        # Print progress message for starting to crawl a new URL
+        print(Fore.LIGHTMAGENTA_EX + f'Starting to crawl URL: {url} (depth: {Fore.LIGHTYELLOW_EX}{depth}{Fore.LIGHTMAGENTA_EX})' + Fore.RESET)
+
         try:
             response = requests.get(url)
             soup = BeautifulSoup(response.content, 'html.parser')
 
             if self.keyword.lower() in soup.text.lower():
-                print(f'Found keyword "{self.keyword}" at {url}')
+                print(Fore.GREEN + f'Found keyword "{Fore.LIGHTGREEN_EX}{self.keyword}{Fore.GREEN}" at {Fore.LIGHTGREEN_EX}{url}' + Fore.RESET)
                 self.process_text(url, soup.text)
 
             links = soup.find_all('a', href=True)
@@ -57,7 +73,6 @@ class WebCrawler(BaseModel):
     def start_crawling(self) -> None:
         for seed_url in self.seed_urls:
             self.crawl(seed_url, 0)
-
 
 # Example usage
 crawler = WebCrawler(
